@@ -77,12 +77,6 @@ class GameController
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
-
-        // Basic checks
-        if ($fullname === '' || $email === '' || $password === '') {
-            $this->showWelcome('Name, email, and password are required.');
-            return;
-        }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->showWelcome('Please enter a valid email address.');
             return;
@@ -115,6 +109,7 @@ class GameController
             // Reset any previous game/session-cached dictionaries
             $_SESSION['game'] = [];
             unset($_SESSION['cache_words7'], $_SESSION['cache_bank']);
+
             $this->startGame(true);
             return;
         }
@@ -144,29 +139,16 @@ class GameController
 
         $_SESSION['game'] = [];
         unset($_SESSION['cache_words7'], $_SESSION['cache_bank']);
-        $this->startGame(true);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->showWelcome('Please enter a valid email address.');
-            return;
-        }
+
         $this->startGame(true);
     }
 
     private function startGame(bool $forceNew = false): void
     {
-        // Initialize or reset the game state
-        if ($forceNew || empty($_SESSION['game'])) {
-            $target = $this->chooseTargetWord();
-            $_SESSION['game'] = [
-                'target' => $target, // lowercase 7-letter word
-                'shuffled' => $this->shuffleLetters($target),
-                'score' => 0,
-                'guessed' => [], // list of valid non-7-letter words
-                'invalid_count' => 0, // number of invalid guesses
-                'messages' => [],
-            ];
-        }
-        $this->renderGame();
+        $this->renderView('game', [
+            'user' => $_SESSION['user'],
+            'game' => $_SESSION['game']
+        ]);
     }
 
     private function renderView(string $viewName, array $data = []): void
