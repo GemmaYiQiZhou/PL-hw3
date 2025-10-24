@@ -10,79 +10,179 @@ class GameController
         session_start();
 
         $this->input = $input;
+
+        $_SESSION['game'] = $_SESSION['game'] ?? [];
+        $_SESSION['user'] = $_SESSION['user'] ?? null;
     }
 
-    /**
-     * Run the server
-     * 
-     * Given the input (usually $_GET), then it will determine
-     * which command to execute based on the given "command"
-     * parameter.  Default is the welcome page.
-     */
+
     public function run()
     {
         // Get the command
-        $command = "welcome";
-        if (
-            isset($this->input["command"]) && (
-                $this->input["command"] == "login" || isset($_SESSION["name"]))
-        )
-            $command = $this->input["command"];
+        $command = $this->input['command'] ?? 'welcome';
 
-        switch ($command) {
-            case "welcome":
-                $controller->showWelcome();
-                break;
 
-            case "start":
-                $controller->startGame();
-                break;
-
-            case "guess":
-                $controller->checkGuess();
-                break;
-
-            case "reshuffle":
-                $controller->reshuffle();
-                break;
-
-            case "gameover":
-                $controller->showGameOver();
-                break;
-
-            default:
-                $controller->showWelcome();
-        }
-
-    }
-
-    public function login()
-    {
-        if (
-            isset($_POST["fullname"]) && isset($_POST["email"]) &&
-            !empty($_POST["fullname"]) && !empty($_POST["email"])
-        ) {
-            // TODO: check that email looks right!
-            $_SESSION["name"] = $_POST["fullname"];
-            $_SESSION["email"] = $_POST["email"];
-            $_SESSION["score"] = 0;
-
-            header("Location: ?command=question");
+        // Gate all pages except welcome/login behind auth
+        if (!$_SESSION['user'] && !in_array($command, ['welcome', 'login'], true)) {
+            $this->redirect('?command=welcome');
             return;
         }
 
-        $this->showWelcome("Name or email missing");
+        switch ($command) {
+            case "welcome":
+                $this->showWelcome();
+                break;
+
+            case 'login':
+                $this->login();
+                break;
+
+            case "start":
+                $this->startGame(true);
+                break;
+
+            case "game":
+                $this->ensureGameInitialized();
+                $this->renderGame();
+                break;
+
+            case 'guess':
+                $this->checkGuess();
+                break;
+
+            case "reshuffle":
+                $this->reshuffle();
+                break;
+
+            case "gameover":
+                $this->showGameOver();
+                break;
+
+            default:
+                $this->showWelcome();
+        }
+
     }
 
-
-    public function logout()
+    private function showWelcome(string $error = '')
     {
-        // Destroy the session
-        session_destroy();
-
-        // Start a new session.  Why?  We want to show the next question.
-        session_start();
-        $_SESSION["score"] = 0;
+        $this->renderView('welcome', [
+            'error' => $error
+        ]);
     }
-    
-?>
+
+    private function login(): void
+    {
+        $fullname = trim($_POST['fullname'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+
+
+        // Basic checks
+        if ($fullname === '' || $email === '' || $password === '') {
+            $this->showWelcome('Name, email, and password are required.');
+            return;
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->showWelcome('Please enter a valid email address.');
+            return;
+        }
+
+
+        // Look up user by email (case-insensitive)
+        $user = Database::fetchOne(
+            'SELECT user_id, name, email, password_hash FROM hw3_users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+            [$email]
+        );
+
+
+        if ($user) {
+            // Existing user → verify password
+            if (!password_verify($password, $user['password_hash'])) {
+                $this->showWelcome('Incorrect password for that email.');
+                return;
+            }
+
+
+            // Success: set session and start fresh game
+            $_SESSION['user'] = [
+                'id' => (int) $user['user_id'],
+                'name' => $user['name'],
+                'email' => $user['email'],
+            ];
+
+
+            // Reset any previous game/session-cached dictionaries
+            $_SESSION['game'] = [];
+            unset($_SESSION['cache_words7'], $_SESSION['cache_bank']);
+            $this->startGame(true);
+            return;
+        }
+
+
+        // New user → create account with hashed password
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+        Database::execute(
+            'INSERT INTO hw3_users (name, email, password_hash) VALUES ($1, $2, $3)',
+            [$fullname, $email, $hash]
+        );
+
+
+        // Fetch the newly created user (primarily to get user_id)
+        $created = Database::fetchOne(
+            'SELECT user_id, name, email FROM hw3_users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+            [$email]
+        );
+
+
+        $_SESSION['user'] = [
+            'id' => (int) $created['user_id'],
+            'name' => $created['name'],
+            'email' => $created['email'],
+        ];
+
+
+        $_SESSION['game'] = [];
+        unset($_SESSION['cache_words7'], $_SESSION['cache_bank']);
+        $this->startGame(true);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->showWelcome('Please enter a valid email address.');
+            return;
+        }
+        $this->startGame(true);
+    }
+
+    private function startGame(bool $forceNew = false): void
+    {
+        // Initialize or reset the game state
+        if ($forceNew || empty($_SESSION['game'])) {
+            $target = $this->chooseTargetWord();
+            $_SESSION['game'] = [
+                'target' => $target, // lowercase 7-letter word
+                'shuffled' => $this->shuffleLetters($target),
+                'score' => 0,
+                'guessed' => [], // list of valid non-7-letter words
+                'invalid_count' => 0, // number of invalid guesses
+                'messages' => [],
+            ];
+        }
+        $this->renderGame();
+    }
+
+    private function renderView(string $viewName, array $data = []): void
+    {
+        // Extracts array keys into variables available to the view
+        extract($data);
+
+        // Build path to the view
+        $path = __DIR__ . "/view/{$viewName}.php";
+
+        if (!file_exists($path)) {
+            die("View not found: $path");
+        }
+
+        require $path;
+    }
+
+}
+

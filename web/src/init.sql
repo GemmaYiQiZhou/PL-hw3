@@ -1,23 +1,18 @@
--- ===========================================
--- Anagrams Game - Initialization Script
--- Safe to re-run: drops then recreates schema
--- ===========================================
-
 BEGIN;
 
--- ---------- Drops (order matters due to FKs)
+-- drops
 DROP VIEW  IF EXISTS hw3_user_stats CASCADE;
 DROP TABLE IF EXISTS hw3_guesses CASCADE;
 DROP TABLE IF EXISTS hw3_games   CASCADE;
 DROP TABLE IF EXISTS hw3_words   CASCADE;
 DROP TABLE IF EXISTS hw3_users   CASCADE;
 
--- ---------- Users
+
 CREATE TABLE hw3_users (
     user_id        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name           TEXT        NOT NULL,
     email          TEXT        NOT NULL,
-    password_hash  TEXT        NOT NULL,   -- store PHP password_hash() result
+    password_hash  TEXT        NOT NULL, 
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -82,16 +77,3 @@ LEFT JOIN hw3_games g ON g.user_id = u.user_id
 GROUP BY u.user_id, u.name, u.email;
 
 COMMIT;
-
--- ---------- Optional: sample rows to test quickly
--- INSERT INTO hw3_users (name, email, password_hash)
--- VALUES ('Test User', 'test@example.com', '$2y$10$dummyhashfrompassword_hash');
-
--- INSERT INTO hw3_words (word) VALUES ('ANAGRAM');  -- must be 7 letters
-
--- -- Start a game and a couple of guesses:
--- INSERT INTO hw3_games (user_id, target_word_id) VALUES (1, 1);
--- INSERT INTO hw3_guesses (game_id, guess, is_valid, is_target, points)
--- VALUES (1, 'ragman', TRUE, FALSE, 30),
---        (1, 'anagram', TRUE, TRUE, 0);
--- UPDATE hw3_games SET score = 30, won = TRUE, ended_at = NOW() WHERE game_id = 1;

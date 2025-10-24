@@ -1,11 +1,12 @@
 <?php
 class Config
 {
-    public static $env = 'local';
-    private static $db_local = [
-        "host" => "localhost",
+
+    public static string $env = 'local'; //change to server when deploy
+    private static array $db_local = [
+        "host" => "db",
         "port" => 5432,
-        "database" => "hw3_users",
+        "database" => "hw3_db",
         "user" => "localuser",
         "password" => "cs4640LocalUser!"
     ];
@@ -16,7 +17,7 @@ class Config
             "port" => "5432",
             "database" => "gsm3cx",
             "user" => "gsm3cx",
-            "password" => "PASSWORD_FROM_CANVAS_FOR_abc1de",
+            "password" => "	mEt-Cc_dJXgU",
         ],
         'kus8en' => [
             "host" => "localhost",
@@ -28,28 +29,38 @@ class Config
     ];
 
 
-    public static function db(): array
+    public static function connect()
     {
-        if (self::$env === 'server') {
-            $id = getenv('COMPUTING_ID') ?: 'gsm3cx';
-            if (!isset(self::$db_server[$id])) {
-                throw new RuntimeException("Unknown COMPUTING_ID '$id'");
+        $env = getenv('APP_ENV') ?: self::$env;
+
+        if ($env === 'server') {
+            $id = getenv('COMPUTING_ID');
+            if (!$id || !isset(self::$db_server[$id])) {
+                die("Unknown or missing COMPUTING_ID environment variable");
             }
-            return self::$db_server[$id];
+            $db = self::$db_server[$id];
+        } else {
+            $db = self::$db_local;
         }
 
-        return self::$db_local;
+        $connectionString = sprintf(
+            "host=%s port=%d dbname=%s user=%s password=%s",
+            $db['host'],
+            $db['port'],
+            $db['database'],
+            $db['user'],
+            $db['password']
+        );
+
+        $connection = pg_connect($connectionString);
+        if (!$connection) {
+            die("Database connection failed");
+        }
+
+        return $connection;
 
     }
+
+
 }
 ;
-
-
-
-$dbHandle = pg_connect("host=$host port=$port dbname=$database user=$user password=$password");
-
-if ($dbHandle) {
-    echo "Success connecting to database";
-} else {
-    echo "An error occurred connecting to the database";
-}

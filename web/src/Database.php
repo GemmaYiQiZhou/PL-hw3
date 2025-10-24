@@ -1,39 +1,68 @@
 <?php
-require_once __DIR__ . '\config.php';
+require_once __DIR__ . '\Config.php';
 
 final class Database
 {
-    public static function connect()
+    private static $connection = null;
+    public static function conn()
     {
-        static $connection = null;
-        if ($connection) {
-            return $connection;
+        if (!self::$connection) {
+            self::$connection = Config::connect();
         }
-
-        $db = Config::db();
-
-        $connectionString = sprintf(
-            "host=%s port=%s dbname=%s user=%s password=%s",
-            $db['host'],
-            $db['port'],
-            $db['database'],
-            $db['user'],
-            $db['password']
-        );
-
-        $connection = pg_connect($connectionString);
-
-        if (!$connection) {
-            die("could not connect");
-        }
+        return self::$connection;
     }
-}
 
-$testConn = Database::connect();
-if ($testConn) {
-    echo "✅ Connection works!<br>";
-    // Example query
-    $res = pg_query($testConn, "SELECT current_date;");
-    $row = pg_fetch_assoc($res);
-    echo "Server date: " . $row['current_date'];
+    public static function query(string $sql)
+    {
+        $conn = self::conn();
+        $result = pg_query($conn, $sql);
+
+        if (!$result) {
+            $error = pg_last_error($conn);
+            die("Query failed: $error");
+        }
+
+        return $result;
+    }
+
+    public static function queryParams(string $sql, array $params)
+    {
+        $conn = self::conn();
+        $result = pg_query_params($conn, $sql, $params);
+
+        if (!$result) {
+            $error = pg_last_error($conn);
+            die("Parameterized query failed: $error");
+        }
+
+        return $result;
+    }
+
+    public static function fetchAll(string $sql, array $params = []): array
+    {
+        $result = $params
+            ? self::queryParams($sql, $params)
+            : self::query($sql);
+
+        return pg_fetch_all($result) ?: [];
+    }
+
+    public static function fetchOne(string $sql, array $params = []): ?array
+    {
+        $result = $params
+            ? self::queryParams($sql, $params)
+            : self::query($sql);
+
+        $row = pg_fetch_assoc($result);
+        return $row ?: null;
+    }
+
+    public static function execute(string $sql, array $params = []): int
+    {
+        $result = $params
+            ? self::queryParams($sql, $params)
+            : self::query($sql);
+
+        return pg_affected_rows($result);
+    }
 }
