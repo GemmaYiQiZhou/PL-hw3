@@ -1,34 +1,16 @@
 <?php
-// index.php, (no database version yet)
 
-session_start();
-require_once "views/game.php";
+// DEBUGGING ONLY! Show all errors.
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
 
-$controller = new game();
-$command = $_GET["command"] ?? "welcome";
+// Class autoloading by name.
+spl_autoload_register(function ($classname) {
+  include "$classname.php";
+});
 
-switch ($command) {
-  case "welcome":
-    $controller->showWelcome();
-    break;
+$game = new GameController($_GET);
 
-  case "start":
-    $controller->startGame();
-    break;
+// Run the controller
+$game->run();
 
-  case "guess":
-    $controller->checkGuess();
-    break;
-
-  case "reshuffle":
-    $controller->reshuffle();
-    break;
-
-  case "gameover":
-    $controller->showGameOver();
-    break;
-
-  default:
-    $controller->showWelcome();
-}
-?>
