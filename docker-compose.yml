@@ -1,0 +1,35 @@
+version: '3.3'
+
+services:
+  db:
+    image: postgres:18
+    container_name: 'hw3_db'
+    restart: on-failure
+    ports:
+      - 15432:5432
+    environment:
+      POSTGRES_USER: localuser
+      POSTGRES_PASSWORD: cs4640LocalUser!
+      POSTGRES_DB: hw3_db
+      TZ: "America/New_York"
+    volumes:
+      - db-data:/var/lib/postgresql
+      - ./web/src/:/opt/src/
+  php:
+    build:
+      context: ./web/
+      dockerfile: ./Dockerfile
+    container_name: 'hw3_web'
+    ports:
+      - 8080:80
+    volumes:
+      - ./web/src/:/opt/src/
+      - ./web/www/:/var/www/html/
+      - ./web/cgi-bin/:/usr/lib/cgi-bin/
+      - ./web/log/:/opt/log/
+    depends_on:
+      - db
+    environment:
+      TZ: "America/New_York"
+volumes:
+  db-data:
