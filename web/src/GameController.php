@@ -8,7 +8,7 @@ class GameController
     private $errorMessage = "";
     public function __construct($input)
     {
-        
+
 
         $this->input = $input;
 
@@ -157,7 +157,7 @@ class GameController
         extract($data);
 
         // For your Docker layout, views live inside /opt/src/view/
-        $path = __DIR__ . "/view/{$viewName}.php";
+        $path = dirname(__DIR__) . "/view/{$viewName}.php";
 
 
         if (!file_exists($path)) {
@@ -165,7 +165,7 @@ class GameController
         }
 
         require $path;
-        
+
     }
 
 }

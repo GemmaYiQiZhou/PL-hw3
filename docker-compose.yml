@@ -24,6 +24,7 @@ services:
       - 8080:80
     volumes:
       - ./web/src/:/opt/src/
+      - ./web/view/:/opt/view/
       - ./web/www/:/var/www/html/
       - ./web/cgi-bin/:/usr/lib/cgi-bin/
       - ./web/log/:/opt/log/

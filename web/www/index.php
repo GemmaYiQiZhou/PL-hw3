@@ -8,6 +8,7 @@ ini_set("display_errors", 1);
 spl_autoload_register(function ($classname) {
   $paths = [
     '/opt/src/' . $classname . '.php',
+    '/opt/view/' . $classname . '.php',
     __DIR__ . '/' . $classname . '.php',
   ];
   foreach ($paths as $file) {
