@@ -6,7 +6,7 @@ services:
     container_name: 'hw3_db'
     restart: on-failure
     ports:
-      - 15432:5432
+      - 15433:5432
     environment:
       POSTGRES_USER: localuser
       POSTGRES_PASSWORD: cs4640LocalUser!

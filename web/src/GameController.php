@@ -1,13 +1,14 @@
 <?php
-
+session_start();
+require_once("config.php");
 class GameController
 {
+
     private $db;
     private $errorMessage = "";
     public function __construct($input)
     {
-        // Start the session! (new!)
-        session_start();
+        
 
         $this->input = $input;
 
@@ -153,17 +154,18 @@ class GameController
 
     private function renderView(string $viewName, array $data = []): void
     {
-        // Extracts array keys into variables available to the view
         extract($data);
 
-        // Build path to the view
+        // For your Docker layout, views live inside /opt/src/view/
         $path = __DIR__ . "/view/{$viewName}.php";
 
+
         if (!file_exists($path)) {
-            die("View not found: $path");
+            die("View not found: {$viewName} (looked in {$path})");
         }
 
         require $path;
+        
     }
 
 }
