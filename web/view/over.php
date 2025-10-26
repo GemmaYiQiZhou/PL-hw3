@@ -1,9 +1,63 @@
+<?php
+$game = $game ?? [
+    'score' => 0,
+    'guesses' => [],
+    'valid' => [],
+    'invalid' => []
+];
+?>
+
 <h2>Game Over</h2>
-<p>Final Score: <?= $_SESSION["score"] ?></p>
-<p>Words: <?= implode(", ", $_SESSION["guesses"]) ?></p>
-<a href="index.php?command=welcome">Play Again</a>
-<p>Score: <?= htmlspecialchars($game['score'] ?? 0) ?></p>
-<p>Valid guesses: <?= implode(', ', $game['valid'] ?? []) ?></p>
-<p>Invalid guesses: <?= implode(', ', $game['invalid'] ?? []) ?></p>
+
+<p><strong>Final Score:</strong> <?= htmlspecialchars($game['score'] ?? 0) ?></p>
+
+<h3>Words:</h3>
+
+<?php if (!empty($game['guesses'])): ?>
+  <ul>
+    <?php foreach ($game['guesses'] as $g): ?>
+      <?php
+        $isValid = in_array($g, $game['valid'] ?? []);
+        $color = $isValid ? 'green' : 'red';
+      ?>
+      <li style="color: <?= $color ?>;"><?= htmlspecialchars($g) ?></li>
+    <?php endforeach; ?>
+  </ul>
+<?php else: ?>
+  <p>No words guessed this round.</p>
+<?php endif; ?>
+
+<?php
+$game = $game ?? ['score' => 0, 'guesses' => [], 'valid' => [], 'invalid' => []];
+?>
+
+<h2>Game Over</h2>
+
+<p><strong>Final Score:</strong> <?= htmlspecialchars($game['score'] ?? 0) ?></p>
+
+<h3>Guessed Words:</h3>
+<?php if (!empty($game['guesses'])): ?>
+  <ul>
+    <?php foreach ($game['guesses'] as $g): ?>
+      <?php $isValid = in_array($g, $game['valid'] ?? []); ?>
+      <li style="color: <?= $isValid ? 'green' : 'red' ?>;">
+        <?= htmlspecialchars($g) ?>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+<?php else: ?>
+  <p>No words guessed this round.</p>
+<?php endif; ?>
+
+<h3>Player Statistics</h3>
+<ul>
+  <li>Games Played: <?= $stats['games_played'] ?? 0 ?></li>
+  <li>Games Won: <?= $stats['games_won'] ?? 0 ?></li>
+  <li>Win Percentage: <?= isset($stats['games_played']) && $stats['games_played'] > 0 ? round(100 * ($stats['games_won'] / $stats['games_played']), 2) : 0 ?>%</li>
+  <li>Highest Score: <?= $stats['highest_score'] ?? 0 ?></li>
+  <li>Average Score: <?= round($stats['average_score'] ?? 0, 2) ?></li>
+</ul>
+
+<br>
 <a href="index.php?command=start">Play Again</a>
 <a href="index.php?command=welcome">Exit</a>

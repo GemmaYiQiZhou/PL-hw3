@@ -31,3 +31,23 @@ $game = $_SESSION['game'] ?? [
 
 <a href="index.php?command=gameover">Quit</a>
 
+<?php
+$stats = Database::fetchOne(
+    "SELECT
+        COUNT(*) AS games_played,
+        ROUND(100.0 * SUM(CASE WHEN won THEN 1 ELSE 0 END) / COUNT(*), 2) AS percent_won,
+        MAX(score) AS highest_score,
+        ROUND(AVG(score), 2) AS average_score
+     FROM hw3_games
+     WHERE user_id = $1",
+    [$_SESSION['user']['id']]
+);
+?>
+
+<h3>Player Statistics</h3>
+<ul>
+  <li>Games Played: <?= $stats['games_played'] ?? 0 ?></li>
+  <li>Games Won: <?= $stats['percent_won'] ?? 0 ?>%</li>
+  <li>Highest Score: <?= $stats['highest_score'] ?? 0 ?></li>
+  <li>Average Score: <?= $stats['average_score'] ?? 0 ?></li>
+</ul>

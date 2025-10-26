@@ -1,10 +1,10 @@
 <?php
 session_start();
+
 class GameController
 {
-    private $db;
-    private $errorMessage = "";
     private array $input;
+
     public function __construct(array $input)
     {
         $this->input = $input;
@@ -12,34 +12,26 @@ class GameController
         $_SESSION['game'] = $_SESSION['game'] ?? [];
     }
 
-
     public function run()
     {
-        // Get the command
         $command = $this->input['command'] ?? 'welcome';
 
-
-        // Gate all pages except welcome/login behind auth
         if (!$_SESSION['user'] && !in_array($command, ['welcome', 'login'], true)) {
             $this->redirect('?command=welcome');
             return;
         }
 
         switch ($command) {
-            case "welcome":
-                $this->showWelcome();
+            case 'welcome':
+                $this->logoutAndShowWelcome();
                 break;
-
             case 'login':
                 $this->login();
                 break;
-
-            case "start":
+            case 'start':
                 $this->startGame(true);
                 break;
-
             case 'game':
-                // If someone hits ?command=game directly
                 if (empty($_SESSION['game']['target'])) {
                     $this->startGame(true);
                 } else {
@@ -49,23 +41,18 @@ class GameController
                     ]);
                 }
                 break;
-
             case 'guess':
                 $this->checkGuess();
                 break;
-
-            case "reshuffle":
+            case 'reshuffle':
                 $this->reshuffle();
                 break;
-
-            case "gameover":
+            case 'gameover':
                 $this->showGameOver();
                 break;
-
             default:
                 $this->showWelcome();
         }
-
     }
 
     private function redirect(string $url): void
@@ -73,11 +60,29 @@ class GameController
         header("Location: {$url}");
         exit;
     }
-    private function showWelcome(string $error = '')
+
+    private function showWelcome(string $error = ''): void
     {
-        $this->renderView('welcome', [
-            'error' => $error
-        ]);
+        $this->renderView('welcome', ['error' => $error]);
+    }
+
+    private function logoutAndShowWelcome(): void
+    {
+        // mark any unfinished games as lost before logout
+        if (!empty($_SESSION['user']['id'])) {
+            Database::execute(
+                "UPDATE hw3_games
+                 SET ended_at = NOW(), won = FALSE
+                 WHERE user_id = $1 AND ended_at IS NULL",
+                [$_SESSION['user']['id']]
+            );
+            $this->updateUserStats($_SESSION['user']['id']);
+        }
+
+        session_unset();
+        session_destroy();
+        session_start();
+        $this->showWelcome();
     }
 
     private function login(): void
@@ -91,64 +96,48 @@ class GameController
             return;
         }
 
-
-        // Look up user by email (case-insensitive)
         $user = Database::fetchOne(
-            'SELECT user_id, name, email, password_hash FROM hw3_users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+            'SELECT user_id, name, email, password_hash FROM hw3_users WHERE LOWER(email)=LOWER($1) LIMIT 1',
             [$email]
         );
 
-
         if ($user) {
-            // Existing user → verify password
             if (!password_verify($password, $user['password_hash'])) {
                 $this->showWelcome('Incorrect password for that email.');
                 return;
             }
 
-
-            // Success: set session and start fresh game
             $_SESSION['user'] = [
-                'id' => (int) $user['user_id'],
+                'id' => (int)$user['user_id'],
                 'name' => $user['name'],
                 'email' => $user['email'],
             ];
 
-
-            // Reset any previous game/session-cached dictionaries
             $_SESSION['game'] = [];
             unset($_SESSION['cache_words7'], $_SESSION['cache_bank']);
-
             $this->startGame(true);
             return;
         }
 
-
-        // New user → create account with hashed password
         $hash = password_hash($password, PASSWORD_DEFAULT);
         Database::execute(
             'INSERT INTO hw3_users (name, email, password_hash) VALUES ($1, $2, $3)',
             [$fullname, $email, $hash]
         );
 
-
-        // Fetch the newly created user (primarily to get user_id)
         $created = Database::fetchOne(
-            'SELECT user_id, name, email FROM hw3_users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+            'SELECT user_id, name, email FROM hw3_users WHERE LOWER(email)=LOWER($1) LIMIT 1',
             [$email]
         );
 
-
         $_SESSION['user'] = [
-            'id' => (int) $created['user_id'],
+            'id' => (int)$created['user_id'],
             'name' => $created['name'],
             'email' => $created['email'],
         ];
 
-
         $_SESSION['game'] = [];
         unset($_SESSION['cache_words7'], $_SESSION['cache_bank']);
-
         $this->startGame(true);
     }
 
@@ -157,24 +146,23 @@ class GameController
         $userId = $_SESSION['user']['id'];
         $target = $this->pickTargetWord($userId);
 
-        // insert into hw3_words if not already
         Database::execute("INSERT INTO hw3_words (word) VALUES ($1) ON CONFLICT DO NOTHING", [$target]);
+        $wordRow = Database::fetchOne("SELECT word_id FROM hw3_words WHERE word=$1", [$target]);
 
-        // retrieve word_id
-        $wordRow = Database::fetchOne("SELECT word_id FROM hw3_words WHERE word = $1", [$target]);
-
-        // create new game record
         Database::execute(
             "INSERT INTO hw3_games (user_id, target_word_id) VALUES ($1, $2)",
             [$userId, $wordRow['word_id']]
         );
 
         $_SESSION['game'] = [
-            'target' => $target,
-            'letters' => str_shuffle($target),
+            'target' => strtoupper($target),
+            'letters' => str_shuffle(strtoupper($target)),
             'score' => 0,
+            'valid' => [],
+            'invalid' => [],
             'guesses' => []
         ];
+        $_SESSION['message'] = ""; // clear message area
 
         $this->renderView('game', ['user' => $_SESSION['user'], 'game' => $_SESSION['game']]);
     }
@@ -182,24 +170,28 @@ class GameController
     private function renderView(string $viewName, array $data = []): void
     {
         extract($data);
-
-        // For your Docker layout, views live inside /opt/src/view/
         $path = dirname(__DIR__) . "/view/{$viewName}.php";
-
-
         if (!file_exists($path)) {
             die("View not found: {$viewName} (looked in {$path})");
         }
-
         require $path;
-
     }
 
     private function loadWordBank(): array
     {
         $path = __DIR__ . "/data/word_bank.json";
-        $json = file_get_contents($path);
-        return json_decode($json, true);
+        if (!file_exists($path)) die("❌ Word bank not found at: {$path}");
+
+        $decoded = json_decode(file_get_contents($path), true);
+        if (!is_array($decoded)) die("❌ Invalid word bank structure.");
+
+        $flat = [];
+        foreach ($decoded as $group)
+            if (is_array($group))
+                foreach ($group as $w)
+                    if (is_string($w)) $flat[] = strtolower(trim($w));
+
+        return $flat;
     }
 
     private function loadSevenLetterWords(): array
@@ -212,7 +204,9 @@ class GameController
     {
         $all = $this->loadSevenLetterWords();
         $played = Database::fetchAll(
-            "SELECT w.word FROM hw3_games g JOIN hw3_words w ON g.target_word_id = w.word_id WHERE g.user_id = $1",
+            "SELECT w.word FROM hw3_games g
+             JOIN hw3_words w ON g.target_word_id=w.word_id
+             WHERE g.user_id=$1",
             [$userId]
         );
         $playedSet = array_column($played, "word");
@@ -223,9 +217,9 @@ class GameController
     private function checkGuess(): void
     {
         $guess = strtoupper(trim($_POST['guess'] ?? ''));
-        $target = $_SESSION['game']['target'];
-        $letters = str_split($target);
+        $target = strtoupper($_SESSION['game']['target']);
         $validWords = $this->loadWordBank();
+        $isValid = false;
 
         if ($guess === '') {
             $_SESSION['message'] = "Please enter a word.";
@@ -233,11 +227,19 @@ class GameController
             return;
         }
 
-        //validate letters
-        foreach (str_split($guess) as $char) {
-            $pos = array_search($char, $letters);
+        if (in_array($guess, $_SESSION['game']['guesses'] ?? [])) {
+            $_SESSION['message'] = "You already guessed {$guess}.";
+            $this->renderView('game', ['user' => $_SESSION['user'], 'game' => $_SESSION['game']]);
+            return;
+        }
+
+        // letter validation
+        $letters = array_map('strtoupper', str_split($_SESSION['game']['target']));
+        foreach (str_split(strtoupper($guess)) as $char) {
+            $pos = array_search($char, $letters, true);
             if ($pos === false) {
                 $_SESSION['game']['invalid'][] = $guess;
+                $_SESSION['game']['guesses'][] = $guess;
                 $_SESSION['message'] = "Used invalid letters.";
                 $this->renderView('game', ['user' => $_SESSION['user'], 'game' => $_SESSION['game']]);
                 return;
@@ -245,43 +247,41 @@ class GameController
             unset($letters[$pos]);
         }
 
-        //validate dictionary
-        $isValid = in_array(strtolower($guess), array_map('strtolower', $validWords));
+        // dictionary validation
+        $isValid = in_array(strtolower($guess), $validWords, true);
 
         if (!$isValid) {
             $_SESSION['game']['invalid'][] = $guess;
+            $_SESSION['game']['guesses'][] = $guess;
             $_SESSION['message'] = "Not a valid word.";
         } else {
             $_SESSION['game']['valid'][] = $guess;
+            $_SESSION['game']['guesses'][] = $guess;
             $points = match (strlen($guess)) {
                 1 => 1, 2 => 2, 3 => 4, 4 => 8, 5 => 15, 6 => 30, default => 0,
             };
             $_SESSION['game']['score'] += $points;
 
-            //save guess in DB
             $gameId = Database::fetchOne(
                 "SELECT game_id FROM hw3_games WHERE user_id=$1 ORDER BY started_at DESC LIMIT 1",
                 [$_SESSION['user']['id']]
             )['game_id'];
 
+            $isValidBool = (bool)$isValid;
+            $isTargetBool = ($guess === $target);
+
             Database::execute(
                 "INSERT INTO hw3_guesses (game_id, guess, is_valid, is_target, points)
-                VALUES ($1, $2, $3, $4, $5)",
-                [
-                    $gameId,
-                    $guess,
-                    $isValid,
-                    ($guess === $target),
-                    $points
-                ]
+                 VALUES ($1,$2,$3,$4,$5)",
+                [$gameId, $guess, $isValidBool, $isTargetBool, $points]
             );
 
-            // If 7-letter target guessed, end game
             if ($guess === $target) {
                 Database::execute(
                     "UPDATE hw3_games SET ended_at=NOW(), won=TRUE, score=$1 WHERE game_id=$2",
                     [$_SESSION['game']['score'], $gameId]
                 );
+                $this->updateUserStats($_SESSION['user']['id']);
                 header("Location: ?command=gameover");
                 return;
             }
@@ -298,18 +298,64 @@ class GameController
 
     private function showGameOver(): void
     {
+        // mark unfinished games as lost
+        Database::execute(
+            "UPDATE hw3_games
+             SET ended_at=NOW(), won=FALSE
+             WHERE user_id=$1 AND ended_at IS NULL",
+            [$_SESSION['user']['id']]
+        );
+        $this->updateUserStats($_SESSION['user']['id']);
+
         $stats = Database::fetchOne(
             "SELECT * FROM hw3_user_stats WHERE user_id=$1",
             [$_SESSION['user']['id']]
         );
 
+        $game = $_SESSION['game'] ?? [
+            'score' => 0,
+            'guesses' => [],
+            'valid' => [],
+            'invalid' => []
+        ];
+
         $this->renderView('over', [
             'user' => $_SESSION['user'],
             'stats' => $stats,
-            'game' => $_SESSION['game']
+            'game' => $game
         ]);
+    }
 
-        session_destroy();
+    private function updateUserStats(int $userId): void
+    {
+        $stats = Database::fetchOne(
+            "SELECT
+                COUNT(*) AS games_played,
+                SUM(CASE WHEN won THEN 1 ELSE 0 END) AS games_won,
+                MAX(score) AS highest_score,
+                AVG(score) AS average_score
+             FROM hw3_games WHERE user_id=$1",
+            [$userId]
+        );
+
+        if (!$stats) return;
+
+        Database::execute(
+            "INSERT INTO hw3_user_stats (user_id, games_played, games_won, highest_score, average_score)
+             VALUES ($1,$2,$3,$4,$5)
+             ON CONFLICT (user_id)
+             DO UPDATE SET
+                games_played=$2,
+                games_won=$3,
+                highest_score=$4,
+                average_score=$5",
+            [
+                $userId,
+                (int)$stats['games_played'],
+                (int)$stats['games_won'],
+                (int)$stats['highest_score'],
+                round((float)$stats['average_score'], 2)
+            ]
+        );
     }
 }
-

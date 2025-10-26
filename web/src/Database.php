@@ -4,6 +4,7 @@ require_once __DIR__ . '/Config.php';
 final class Database
 {
     private static $connection = null;
+
     public static function conn()
     {
         if (!self::$connection) {
@@ -28,6 +29,14 @@ final class Database
     public static function queryParams(string $sql, array $params)
     {
         $conn = self::conn();
+
+        // ✅ Convert PHP booleans to PostgreSQL 'true' / 'false'
+        foreach ($params as &$p) {
+            if (is_bool($p)) {
+                $p = $p ? 'true' : 'false';
+            }
+        }
+
         $result = pg_query_params($conn, $sql, $params);
 
         if (!$result) {
