@@ -10,4 +10,6 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 COPY ./php-ini/php.prod.ini /usr/local/etc/php/php.ini
 
 RUN a2enmod cgi
-RUN service apache2 restart
+
+EXPOSE 80
+CMD ["apache2-foreground"]

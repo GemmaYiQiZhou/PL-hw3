@@ -4,7 +4,7 @@ class Config
 
     public static string $env = 'local'; //change to server when deploy
     private static array $db_local = [
-        "host" => "db_2025",
+        "host" => "db",
         "port" => 5432,
         "database" => "hw3_db",
         "user" => "localuser",
