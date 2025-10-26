@@ -27,5 +27,7 @@ $game = $_SESSION['game'] ?? [
   <?php endforeach; ?>
 </ul>
 
+<a href="index.php?command=reshuffle">Reshuffle</a>
+
 <a href="index.php?command=gameover">Quit</a>
 
