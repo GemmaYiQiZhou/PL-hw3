@@ -4,7 +4,7 @@ class Config
 
     public static string $env = 'local'; //change to server when deploy
     private static array $db_local = [
-        "host" => "db",
+        "host" => "db_2025",
         "port" => 5432,
         "database" => "hw3_db",
         "user" => "localuser",
@@ -24,7 +24,7 @@ class Config
             "port" => "5432",
             "database" => "kus8en",
             "user" => "kus8en",
-            "password" => "PASSWORD_FROM_CANVAS_FOR_abc1de",
+            "password" => "o-UkuggETehb",
         ],
     ];
 
