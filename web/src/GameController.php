@@ -1,19 +1,15 @@
 <?php
 session_start();
-require_once("config.php");
 class GameController
 {
-
     private $db;
     private $errorMessage = "";
-    public function __construct($input)
+    private array $input;
+    public function __construct(array $input)
     {
-
-
         $this->input = $input;
-
-        $_SESSION['game'] = $_SESSION['game'] ?? [];
         $_SESSION['user'] = $_SESSION['user'] ?? null;
+        $_SESSION['game'] = $_SESSION['game'] ?? [];
     }
 
 
@@ -42,9 +38,16 @@ class GameController
                 $this->startGame(true);
                 break;
 
-            case "game":
-                $this->ensureGameInitialized();
-                $this->renderGame();
+            case 'game':
+                // If someone hits ?command=game directly
+                if (empty($_SESSION['game']['target'])) {
+                    $this->startGame(true);
+                } else {
+                    $this->renderView('game', [
+                        'user' => $_SESSION['user'],
+                        'game' => $_SESSION['game']
+                    ]);
+                }
                 break;
 
             case 'guess':
@@ -65,6 +68,11 @@ class GameController
 
     }
 
+    private function redirect(string $url): void
+    {
+        header("Location: {$url}");
+        exit;
+    }
     private function showWelcome(string $error = '')
     {
         $this->renderView('welcome', [
@@ -187,18 +195,21 @@ class GameController
 
     }
 
-    private function loadWordBank(): array {
+    private function loadWordBank(): array
+    {
         $path = __DIR__ . "/data/word_bank.json";
         $json = file_get_contents($path);
         return json_decode($json, true);
     }
 
-    private function loadSevenLetterWords(): array {
+    private function loadSevenLetterWords(): array
+    {
         $path = __DIR__ . "/data/words7.txt";
         return file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     }
 
-    private function pickTargetWord(int $userId): string {
+    private function pickTargetWord(int $userId): string
+    {
         $all = $this->loadSevenLetterWords();
         $played = Database::fetchAll(
             "SELECT w.word FROM hw3_games g JOIN hw3_words w ON g.target_word_id = w.word_id WHERE g.user_id = $1",
@@ -210,9 +221,9 @@ class GameController
     }
 
     private function checkGuess(): void
-        {
-            $guess = strtoupper(trim($_POST['guess'] ?? ''));
-            $target = $_SESSION['game']['target'];
+    {
+        $guess = strtoupper(trim($_POST['guess'] ?? ''));
+        $target = $_SESSION['game']['target'];
         $letters = str_split($target);
         $validWords = $this->loadWordBank();
 
@@ -240,7 +251,7 @@ class GameController
         if (!$isValid) {
             $_SESSION['game']['invalid'][] = $guess;
             $_SESSION['message'] = "Not a valid word.";
-        }    else {
+        } else {
             $_SESSION['game']['valid'][] = $guess;
             $points = match (strlen($guess)) {
                 1 => 1, 2 => 2, 3 => 4, 4 => 8, 5 => 15, 6 => 30, default => 0,
@@ -279,18 +290,20 @@ class GameController
         $this->renderView('game', ['user' => $_SESSION['user'], 'game' => $_SESSION['game']]);
     }
 
-    private function reshuffle(): void {
+    private function reshuffle(): void
+    {
         $_SESSION['game']['letters'] = str_shuffle($_SESSION['game']['target']);
         $this->renderView('game', ['user' => $_SESSION['user'], 'game' => $_SESSION['game']]);
     }
 
-    private function showGameOver(): void {
+    private function showGameOver(): void
+    {
         $stats = Database::fetchOne(
             "SELECT * FROM hw3_user_stats WHERE user_id=$1",
             [$_SESSION['user']['id']]
         );
 
-            $this->renderView('over', [
+        $this->renderView('over', [
             'user' => $_SESSION['user'],
             'stats' => $stats,
             'game' => $_SESSION['game']
@@ -298,10 +311,5 @@ class GameController
 
         session_destroy();
     }
-
-
-
-
-
 }
 

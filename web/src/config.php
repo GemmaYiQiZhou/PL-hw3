@@ -17,7 +17,7 @@ class Config
             "port" => "5432",
             "database" => "gsm3cx",
             "user" => "gsm3cx",
-            "password" => "	mEt-Cc_dJXgU",
+            "password" => "PAAWORD",
         ],
         'kus8en' => [
             "host" => "localhost",
@@ -60,7 +60,5 @@ class Config
         return $connection;
 
     }
-
-
 }
 ;

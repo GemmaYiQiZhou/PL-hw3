@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
   db:
-    image: postgres:18
+    image: postgres:16
     container_name: 'hw3_db'
     restart: on-failure
     ports:
@@ -13,8 +13,8 @@ services:
       POSTGRES_DB: hw3_db
       TZ: "America/New_York"
     volumes:
-      - db-data:/var/lib/postgresql
-      - ./web/src/:/opt/src/
+      - db-data:/var/lib/postgresql/data
+      - ./web/src:/docker-entrypoint-initdb.d
   php:
     build:
       context: ./web/
