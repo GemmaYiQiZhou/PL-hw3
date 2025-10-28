@@ -68,7 +68,7 @@ class GameController
 
     private function logoutAndShowWelcome(): void
     {
-        // mark any unfinished games as lost before logout
+        //mark any unfinished games as lost before logout
         if (!empty($_SESSION['user']['id'])) {
             Database::execute(
                 "UPDATE hw3_games
@@ -162,7 +162,8 @@ class GameController
             'invalid' => [],
             'guesses' => []
         ];
-        $_SESSION['message'] = ""; // clear message area
+        //clear message
+        $_SESSION['message'] = ""; 
 
         $this->renderView('game', ['user' => $_SESSION['user'], 'game' => $_SESSION['game']]);
     }
@@ -179,6 +180,7 @@ class GameController
 
     private function loadWordBank(): array
     {
+        //change to given 
         $path = __DIR__ . "/data/word_bank.json";
         if (!file_exists($path)) die("❌ Word bank not found at: {$path}");
 
@@ -196,6 +198,7 @@ class GameController
 
     private function loadSevenLetterWords(): array
     {
+        //change to given
         $path = __DIR__ . "/data/words7.txt";
         return file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     }
@@ -220,6 +223,9 @@ class GameController
         $target = strtoupper($_SESSION['game']['target']);
         $validWords = $this->loadWordBank();
         $isValid = false;
+        
+        // reset message each time
+        $_SESSION['message'] = ""; 
 
         if ($guess === '') {
             $_SESSION['message'] = "Please enter a word.";
@@ -301,10 +307,11 @@ class GameController
         // mark unfinished games as lost
         Database::execute(
             "UPDATE hw3_games
-             SET ended_at=NOW(), won=FALSE
-             WHERE user_id=$1 AND ended_at IS NULL",
-            [$_SESSION['user']['id']]
-        );
+            SET ended_at=NOW(), won=FALSE, score=$2
+            WHERE user_id=$1 AND ended_at IS NULL",
+            [$_SESSION['user']['id'], $_SESSION['game']['score']]
+            );
+
         $this->updateUserStats($_SESSION['user']['id']);
 
         $stats = Database::fetchOne(

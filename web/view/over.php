@@ -1,31 +1,3 @@
-<?php
-$game = $game ?? [
-    'score' => 0,
-    'guesses' => [],
-    'valid' => [],
-    'invalid' => []
-];
-?>
-
-<h2>Game Over</h2>
-
-<p><strong>Final Score:</strong> <?= htmlspecialchars($game['score'] ?? 0) ?></p>
-
-<h3>Words:</h3>
-
-<?php if (!empty($game['guesses'])): ?>
-  <ul>
-    <?php foreach ($game['guesses'] as $g): ?>
-      <?php
-        $isValid = in_array($g, $game['valid'] ?? []);
-        $color = $isValid ? 'green' : 'red';
-      ?>
-      <li style="color: <?= $color ?>;"><?= htmlspecialchars($g) ?></li>
-    <?php endforeach; ?>
-  </ul>
-<?php else: ?>
-  <p>No words guessed this round.</p>
-<?php endif; ?>
 
 <?php
 $game = $game ?? ['score' => 0, 'guesses' => [], 'valid' => [], 'invalid' => []];
