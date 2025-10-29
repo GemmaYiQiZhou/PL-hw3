@@ -30,7 +30,7 @@ final class Database
     {
         $conn = self::conn();
 
-        // ✅ Convert PHP booleans to PostgreSQL 'true' / 'false'
+        //Convert PHP booleans to PostgreSQL 'true' / 'false'
         foreach ($params as &$p) {
             if (is_bool($p)) {
                 $p = $p ? 'true' : 'false';
