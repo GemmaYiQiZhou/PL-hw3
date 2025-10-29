@@ -181,7 +181,8 @@ class GameController
     private function loadWordBank(): array
     {
         //change to given 
-        $path = __DIR__ . "/data/word_bank.json";
+        $path = __DIR__ . /var/www/html/homework/word_bank.json
+        //"/data/word_bank.json";
         if (!file_exists($path)) die("❌ Word bank not found at: {$path}");
 
         $decoded = json_decode(file_get_contents($path), true);
@@ -199,7 +200,8 @@ class GameController
     private function loadSevenLetterWords(): array
     {
         //change to given
-        $path = __DIR__ . "/data/words7.txt";
+        $path = __DIR__ . /var/www/html/homework/words7.txt
+        //"/data/words7.txt";
         return file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     }
 
