@@ -74,4 +74,32 @@ final class Database
 
         return pg_affected_rows($result);
     }
+
+    public static function getUserStats($user_id)
+    {
+        $conn = self::conn();
+
+        $sql = <<<SQL
+        SELECT
+            u.user_id,
+            u.name,
+            u.email,
+            COUNT(g.game_id) AS games_played,
+            COALESCE(ROUND(AVG(g.score)::numeric, 2), 0) AS avg_score,
+            COALESCE(MAX(g.score), 0) AS best_score,
+            COALESCE(ROUND(100.0 * AVG(CASE WHEN g.won THEN 1 ELSE 0 END)::numeric, 2), 0) AS win_pct
+        FROM hw3_users u
+        LEFT JOIN hw3_games g ON g.user_id = u.user_id
+        WHERE u.user_id = $1
+        GROUP BY u.user_id, u.name, u.email
+        SQL;
+
+        $result = pg_query_params($conn, $sql, [$user_id]);
+        if (!$result) {
+            die("❌ Failed to fetch user stats: " . pg_last_error($conn));
+        }
+
+        return pg_fetch_assoc($result);
+}
+
 }

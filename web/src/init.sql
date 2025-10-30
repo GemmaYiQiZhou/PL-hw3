@@ -62,18 +62,13 @@ CREATE TABLE hw3_guesses (
 CREATE INDEX hw3_guesses_game_idx ON hw3_guesses(game_id);
 CREATE INDEX hw3_guesses_valid_idx ON hw3_guesses(is_valid);
 
--- ---------- Convenience view: per-user lifetime stats
-CREATE VIEW hw3_user_stats AS
-SELECT
-    u.user_id,
-    u.name,
-    u.email,
-    COUNT(g.game_id)                                  AS games_played,
-    COALESCE(ROUND(AVG(g.score)::numeric, 2), 0)      AS avg_score,
-    COALESCE(MAX(g.score), 0)                         AS best_score,
-    COALESCE(ROUND(100.0 * AVG(CASE WHEN g.won THEN 1 ELSE 0 END)::numeric, 2), 0) AS win_pct
-FROM hw3_users u
-LEFT JOIN hw3_games g ON g.user_id = u.user_id
-GROUP BY u.user_id, u.name, u.email;
+DROP VIEW IF EXISTS hw3_user_stats CASCADE;
 
-COMMIT;
+CREATE TABLE hw3_user_stats (
+    user_id BIGINT PRIMARY KEY,
+    games_played INT DEFAULT 0,
+    games_won INT DEFAULT 0,
+    highest_score INT DEFAULT 0,
+    average_score DECIMAL(5,2) DEFAULT 0,
+    win_pct DECIMAL(5,2) DEFAULT 0
+);

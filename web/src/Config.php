@@ -2,9 +2,9 @@
 class Config
 {
 
-    public static string $env = 'local'; //change to server when deploy
+    public static string $env = 'server'; //change to server when deploy
     private static array $db_local = [
-        "host" => "db",
+        "host" => "hw3_db",
         "port" => 5432,
         "database" => "hw3_db",
         "user" => "localuser",
@@ -24,7 +24,7 @@ class Config
             "port" => "5432",
             "database" => "kus8en",
             "user" => "kus8en",
-            "password" => "o-UkuggETehb",
+            "password" => "zH8FNgMvItK5",
         ],
     ];
 
@@ -34,13 +34,15 @@ class Config
         $env = getenv('APP_ENV') ?: self::$env;
 
         if ($env === 'server') {
-            $id = getenv('COMPUTING_ID');
-            if (!$id || !isset(self::$db_server[$id])) {
-                die("Unknown or missing COMPUTING_ID environment variable");
-            }
+            $id = 'kus8en';
             $db = self::$db_server[$id];
+            //$id = getenv('COMPUTING_ID');
+            //if (!$id || !isset(self::$db_server[$id])) {
+             //   die("Unknown or missing COMPUTING_ID environment variable");
+            //}
+            //$db = self::$db_server[$id];
         } else {
-            $db = self::$db_local;
+           $db = self::$db_local;
         }
 
         $connectionString = sprintf(

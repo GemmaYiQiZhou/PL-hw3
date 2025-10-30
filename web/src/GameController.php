@@ -181,8 +181,9 @@ class GameController
     private function loadWordBank(): array
     {
         //change to given 
-        $path = __DIR__ . /var/www/html/homework/word_bank.json
+        $path =  '/var/www/html/homework/word_bank.json';
         //"/data/word_bank.json";
+        // /var/www/html/homework/word_bank.json
         if (!file_exists($path)) die("❌ Word bank not found at: {$path}");
 
         $decoded = json_decode(file_get_contents($path), true);
@@ -200,8 +201,9 @@ class GameController
     private function loadSevenLetterWords(): array
     {
         //change to given
-        $path = __DIR__ . /var/www/html/homework/words7.txt
+        $path = '/var/www/html/homework/words7.txt';
         //"/data/words7.txt";
+        // /var/www/html/homework/words7.txt
         return file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     }
 
@@ -316,22 +318,24 @@ class GameController
 
         $this->updateUserStats($_SESSION['user']['id']);
 
+        //$stats = Database::fetchOne(
+          //  "SELECT * FROM hw3_user_stats WHERE user_id=$1",
+            //[$_SESSION['user']['id']]
+        //);
         $stats = Database::fetchOne(
-            "SELECT * FROM hw3_user_stats WHERE user_id=$1",
+            "SELECT
+                COUNT(*) AS games_played,
+                SUM(CASE WHEN won THEN 1 ELSE 0 END) AS games_won,
+                MAX(score) AS highest_score,
+                ROUND(AVG(score), 2) AS average_score
+            FROM hw3_games
+            WHERE user_id = $1",
             [$_SESSION['user']['id']]
         );
 
-        $game = $_SESSION['game'] ?? [
-            'score' => 0,
-            'guesses' => [],
-            'valid' => [],
-            'invalid' => []
-        ];
-
         $this->renderView('over', [
-            'user' => $_SESSION['user'],
-            'stats' => $stats,
-            'game' => $game
+            'game' => $_SESSION['game'],
+            'stats' => $stats
         ]);
     }
 

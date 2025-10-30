@@ -1,4 +1,6 @@
 <?php
+// Homework 3 - Anagrams Game
+// Published at: https://cs4640.cs.virginia.edu/kus8en/hw3 and https://cs4640.cs.virginia.edu/gsm3ck/hw3
 $game = $_SESSION['game'] ?? [
   'target' => '',
   'letters' => '',
@@ -47,7 +49,11 @@ $stats = Database::fetchOne(
 <h3>Player Statistics</h3>
 <ul>
   <li>Games Played: <?= $stats['games_played'] ?? 0 ?></li>
-  <li>Games Won: <?= $stats['percent_won'] ?? 0 ?>%</li>
+  <li>Games Won: <?= $stats['games_won'] ?? 0 ?></li>
+  <li>Win Percentage: <?= isset($stats['games_played'], $stats['games_won']) && $stats['games_played'] > 0
+        ? round(100 * ($stats['games_won'] / $stats['games_played']), 2)
+        : 0 ?>%
+  </li>
   <li>Highest Score: <?= $stats['highest_score'] ?? 0 ?></li>
-  <li>Average Score: <?= $stats['average_score'] ?? 0 ?></li>
+  <li>Average Score: <?= round($stats['average_score'] ?? 0, 2) ?></li>
 </ul>
